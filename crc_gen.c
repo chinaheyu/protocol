@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdbool.h>
+#include <stdlib.h>
 
 #define BIT(x)  (1u << (x))
 
@@ -185,4 +186,6 @@ int main() {
     }
 
     fclose(fp);
+
+    system("crc_table.txt");
 }

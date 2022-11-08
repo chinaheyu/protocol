@@ -28,6 +28,12 @@ int main(int argc, char* argv[]) {
 
         size_t send_size = protocol_pack_data_to_buffer(0x0123, data, data_size, tx_buf);
 
+        printf("Packed frame: ");
+        for (int i = 0; i < send_size; ++i) {
+            printf("%02x ", tx_buf[i]);
+        }
+        printf("\n");
+
         for (int i = 0; i < send_size; ++i) {
             if (protocol_unpack_byte(&unpack_data_obj, tx_buf[i]))
             {

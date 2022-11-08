@@ -16,6 +16,11 @@
 #ifndef PROTOCOL_PROTOCOL_LITE_H
 #define PROTOCOL_PROTOCOL_LITE_H
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 #include <stdint.h>
 
 #define PROTOCOL_HEADER                         0xA5
@@ -91,5 +96,8 @@ extern uint64_t swap_uint64( uint64_t val );
 
 extern int64_t swap_int64( int64_t val );
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif //PROTOCOL_PROTOCOL_LITE_H
