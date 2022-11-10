@@ -334,7 +334,7 @@ void append_crc32(uint8_t *pchMessage, uint32_t dwLength)
     pchMessage[dwLength - 1] = (uint8_t)((wCRC >> 24) & 0xff);
 }
 
-size_t protocol_calculate_frame_size(size_t data_size)
+uint32_t protocol_calculate_frame_size(uint32_t data_size)
 {
     if (data_size == 0)
     {
@@ -343,9 +343,9 @@ size_t protocol_calculate_frame_size(size_t data_size)
     return data_size + PROTOCOL_HEADER_CRC_SIZE;
 }
 
-size_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t len, uint8_t *buffer)
+uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t len, uint8_t *buffer)
 {
-    size_t frame_size = protocol_calculate_frame_size(len);
+    uint32_t frame_size = protocol_calculate_frame_size(len);
 
     frame_header_t* p_header = (frame_header_t *)buffer;
     p_header->sof = PROTOCOL_HEADER;

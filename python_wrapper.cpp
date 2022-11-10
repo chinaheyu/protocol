@@ -10,7 +10,7 @@ namespace py = pybind11;
 
 struct UnpackedFrame {
     UnpackedFrame(uint16_t _cmd_id, const std::string& _data) : cmd_id(_cmd_id), data(_data) { }
-    UnpackedFrame(uint16_t _cmd_id, const char* _data, size_t _len) : cmd_id(_cmd_id), data(_data, _len) { }
+    UnpackedFrame(uint16_t _cmd_id, const char* _data, uint32_t _len) : cmd_id(_cmd_id), data(_data, _len) { }
     uint16_t cmd_id;
     py::bytes data;
 
@@ -50,13 +50,13 @@ struct UnpackStream {
     unpack_data_t unpack_data_obj;
 };
 
-size_t calculate_frame_size(size_t data_size) {
+uint32_t calculate_frame_size(uint32_t data_size) {
     return protocol_calculate_frame_size(data_size);
 }
 
 py::bytes pack_data(uint16_t cmd_id, py::bytes& data) {
     std::string data_string(data);
-    size_t frame_size = protocol_calculate_frame_size(data_string.size());
+    uint32_t frame_size = protocol_calculate_frame_size(data_string.size());
     if (frame_size > PROTOCOL_FRAME_MAX_SIZE) {
         return {};
     }

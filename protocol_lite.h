@@ -72,9 +72,9 @@ typedef struct
 
 // API
 
-extern size_t protocol_calculate_frame_size(size_t data_size);
+extern uint32_t protocol_calculate_frame_size(uint32_t data_size);
 
-extern size_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t len, uint8_t *buffer);
+extern uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t len, uint8_t *buffer);
 
 extern void protocol_initialize_unpack_object(unpack_data_t* unpack_obj);
 
