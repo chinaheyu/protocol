@@ -11,6 +11,9 @@
  *
  * The frame_tail is the checksum of the total frame.
  * If data_length == 0, frame_tail will be dropped.
+ *
+ * Author: Yu He
+ * Link: https://github.com/chinaheyu/protocol
  */
 
 #ifndef PROTOCOL_PROTOCOL_LITE_H
@@ -29,6 +32,9 @@ extern "C"
 #define PROTOCOL_HEADER_CRC_SIZE                (PROTOCOL_HEADER_SIZE + 2)
 #define PROTOCOL_DATA_MAX_SIZE                  (PROTOCOL_FRAME_MAX_SIZE - PROTOCOL_HEADER_CRC_SIZE)
 
+#ifdef __CC_ARM
+    #pragma anon_unions
+#endif
 
 #pragma pack(push)
 #pragma pack(1)
