@@ -461,6 +461,12 @@ uint32_t protocol_unpack_byte(unpack_data_t* unpack_obj, uint8_t byte)
                 }
             }
 
+            if (unpack_obj->index > PROTOCOL_HEADER_SIZE)
+            {
+                unpack_obj->unpack_step = STEP_HEADER_SOF;
+                unpack_obj->index = 0;
+            }
+
             return 0;
         }
 

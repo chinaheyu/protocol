@@ -2,7 +2,6 @@
 #include <pybind11/stl.h>
 #include <vector>
 #include <sstream>
-#include <iomanip>
 #include <fmt/format.h>
 #include "protocol_lite.h"
 

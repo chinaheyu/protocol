@@ -27,18 +27,9 @@ std::string select_ports()
 void frame_received_callback(uint16_t cmd_id, uint8_t* p_data, uint16_t len) {
     std::vector<uint8_t> data(p_data, p_data + len);
 
-    switch (cmd_id) {
-        case 0x0000:
-            uint32_t frame_size = protocol_calculate_frame_size(len);
-            auto buf = new uint8_t[frame_size];
-            protocol_pack_data_to_buffer(0x0001, p_data, len, buf);
-            serial_port->write(buf, frame_size);
-            delete[] buf;
-            break;
-    }
-
     fmt::print("[{:%H:%M:%S}]Received frame, cmd_id: 0x{:04x}, data: {:02x}.\n",
                fmt::localtime(std::time(nullptr)),cmd_id, fmt::join(data.begin(), data.end(), " "));
+
 }
 
 uint8_t hex_to_byte(char hi, char lo) {
@@ -115,12 +106,10 @@ int main(int argc, char* argv[]) {
 
     unpack_data_t unpack_data_obj;
     protocol_initialize_unpack_object(&unpack_data_obj);
-    std::vector<uint8_t> buffer;
+    uint8_t ch;
     while (serial_port->isOpen()) {
-        serial_port->read(buffer, std::max<size_t>(serial_port->available(), 1));
-
-        for (uint8_t byte : buffer) {
-            if (protocol_unpack_byte(&unpack_data_obj, byte)) {
+        if (serial_port->read(&ch, 1)) {
+            if (protocol_unpack_byte(&unpack_data_obj, ch)) {
                 frame_received_callback(unpack_data_obj.cmd_id, unpack_data_obj.data, unpack_data_obj.data_len);
             }
         }
