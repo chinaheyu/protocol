@@ -23,7 +23,7 @@ The frame_tail is the checksum of the total frame. If `data_length == 0`, frame_
 Pack data to memory.
 
 ```c
-size_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t len, uint8_t *buffer);
+uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t len, uint8_t *buffer);
 ```
 
 Unpack from byte stream.
