@@ -1,11 +1,17 @@
+/**
+ * This demo dependence on the serial library:
+ * https://github.com/wjwwood/serial
+ */
+
+
 #include <iostream>
 #include <vector>
 #include <memory>
 #include <thread>
 #include "serial/serial.h"
 #include "protocol_lite.h"
-#include "fmt/format.h"
-#include "fmt/chrono.h"
+#include <fmt/format.h>
+#include <fmt/chrono.h>
 
 
 std::shared_ptr<serial::Serial> serial_port;

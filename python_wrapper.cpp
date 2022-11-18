@@ -66,7 +66,7 @@ py::bytes pack_data(uint16_t cmd_id, py::bytes& data) {
 }
 
 
-PYBIND11_MODULE(protocol_lite, m) {
+PYBIND11_MODULE(py_protocol, m) {
     m.doc() = "protocol_lite python wrapper.";
 
     py::class_<UnpackedFrame>(m, "UnpackedFrame")
