@@ -5,7 +5,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-on-ubuntu:
+  test-on-ubuntu:
 
     runs-on: ubuntu-latest
 
@@ -24,7 +24,7 @@ jobs:
           cmake --build .
           ctest
 
-  build-on-windows:
+  test-on-windows:
 
     runs-on: windows-latest
 
@@ -43,7 +43,7 @@ jobs:
           cmake --build . --config Release
           ctest
 
-  build-on-macos:
+  test-on-macos:
 
     runs-on: macos-latest
 
