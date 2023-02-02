@@ -22,7 +22,14 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release
           cmake --build .
+          cmake --install .
           ctest
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifact_ubuntu
+          path: install/*
 
   test-on-windows:
 
@@ -41,7 +48,14 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release
           cmake --build . --config Release
+          cmake --install .
           ctest
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifact_windows
+          path: install/*
 
   test-on-macos:
 
@@ -60,4 +74,11 @@ jobs:
           cd build
           cmake .. -DCMAKE_BUILD_TYPE=Release
           cmake --build .
+          cmake --install .
           ctest
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: artifact_macos
+          path: install/*

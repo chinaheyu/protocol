@@ -1,11 +1,20 @@
 cmake_minimum_required(VERSION 3.10)
-project(protocol C)
+project(protocol C CXX)
 
 set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_INSTALL_PREFIX ${CMAKE_SOURCE_DIR}/install)
+
+if(NOT DEFINED CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release)
+endif()
 
 if(NOT DEFINED BUILD_PYTHON_BINDINGS)
     set(BUILD_PYTHON_BINDINGS ON)
+endif()
+
+if(UNIX AND NOT APPLE)
+    add_compile_options(-fPIC)
 endif()
 
 # protocol library
