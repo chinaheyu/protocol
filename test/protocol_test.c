@@ -1,11 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "../include/protocol.h"
+#include "protocol.h"
 
-#define PROTOCOL_FRAME_MAX_SIZE 128
-#define PROTOCOL_DATA_MAX_SIZE 120
+#define PROTOCOL_DATA_MAX_SIZE (0xffffu)
+#define PROTOCOL_FRAME_MAX_SIZE (PROTOCOL_DATA_MAX_SIZE + 8u)
 int test_result;
+char* line_buffer;
+uint8_t* data;
+uint8_t* frame_buffer;
+uint8_t* test_frame_buffer;
 
 #define TEST_SUCCESS do { \
     test_result = 0; \
@@ -26,7 +30,7 @@ uint8_t hex_to_byte(char hi, char lo) {
     return strtoul(hex_string, NULL, 16);
 }
 
-uint16_t file_read_hex_line(FILE* fp, uint8_t* out, uint16_t max_size)
+uint16_t file_read_hex_line(FILE* fp, uint8_t* out, uint32_t max_size)
 {
     uint16_t data_len = 0;
     for (int i = 0; i < max_size; ++i) {
@@ -57,15 +61,9 @@ uint16_t file_read_hex_line(FILE* fp, uint8_t* out, uint16_t max_size)
 
 int pack_test(FILE* fp)
 {
-    char line_buffer[2000];
-
     uint16_t cmd_id;
     uint16_t data_len;
-    uint8_t data[PROTOCOL_DATA_MAX_SIZE];
     int frame_size;
-    uint8_t frame_buffer[PROTOCOL_FRAME_MAX_SIZE];
-
-    uint8_t test_frame_buffer[PROTOCOL_FRAME_MAX_SIZE];
 
     fseek(fp, 0, SEEK_SET);
 
@@ -82,9 +80,7 @@ int pack_test(FILE* fp)
 
         frame_size = file_read_hex_line(fp, frame_buffer, PROTOCOL_FRAME_MAX_SIZE);
 
-        int test_frame_size = protocol_pack_data_to_buffer(cmd_id, data, data_len, test_frame_buffer);
-        if (test_frame_size == PROTOCOL_ERROR)
-            return 0;
+        uint32_t test_frame_size = protocol_pack_data_to_buffer(cmd_id, data, data_len, test_frame_buffer);
 
         if (frame_size != test_frame_size)
             return 0;
@@ -105,15 +101,11 @@ int pack_test(FILE* fp)
 
 int unpack_test(FILE* fp)
 {
-    char line_buffer[2000];
-
     uint16_t cmd_id;
     uint16_t data_len;
-    uint8_t data[PROTOCOL_DATA_MAX_SIZE];
     int frame_size;
-    uint8_t frame_buffer[PROTOCOL_FRAME_MAX_SIZE];
 
-    protocol_stream_t* unpack_obj = protocol_create_unpack_stream(PROTOCOL_DATA_MAX_SIZE);
+    protocol_stream_t* unpack_obj = protocol_create_unpack_stream(PROTOCOL_DATA_MAX_SIZE, true);
 
     fseek(fp, 0, SEEK_SET);
 
@@ -165,15 +157,12 @@ int unpack_test(FILE* fp)
 
 int unpack_negative_test(FILE* fp)
 {
-    char line_buffer[2000];
-
     uint16_t cmd_id;
     uint16_t data_len;
-    uint8_t data[PROTOCOL_DATA_MAX_SIZE];
-    int frame_size;
-    uint8_t frame_buffer[PROTOCOL_FRAME_MAX_SIZE];
 
-    protocol_stream_t* unpack_obj = protocol_create_unpack_stream(PROTOCOL_DATA_MAX_SIZE);
+    int frame_size;
+
+    protocol_stream_t* unpack_obj = protocol_create_unpack_stream(PROTOCOL_DATA_MAX_SIZE, true);
 
     fseek(fp, 0, SEEK_SET);
 
@@ -216,6 +205,10 @@ int main(int argc, char *argv[])
     }
 
     FILE* fp = fopen(argv[2], "r");
+    line_buffer = (char*)malloc(PROTOCOL_FRAME_MAX_SIZE * 3 + 2);
+    data = (uint8_t*)malloc(PROTOCOL_DATA_MAX_SIZE);
+    frame_buffer = (uint8_t*)malloc(PROTOCOL_FRAME_MAX_SIZE);
+    test_frame_buffer = (uint8_t*)malloc(PROTOCOL_FRAME_MAX_SIZE);
 
     int opt = atoi(argv[1]);
     switch (opt) {
@@ -270,5 +263,9 @@ int main(int argc, char *argv[])
     }
 
     fclose(fp);
+    free(line_buffer);
+    free(data);
+    free(frame_buffer);
+    free(test_frame_buffer);
     return test_result;
 }

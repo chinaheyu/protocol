@@ -27,17 +27,16 @@ class ProgressBar:
     def __init__(self, toolbar_width, prefix=''):
         self.width = toolbar_width
         self.value = 0
-        sys.stdout.write("%s[%s]" % (prefix, " " * self.width))
+        sys.stdout.write(f"{prefix}[")
         sys.stdout.flush()
-        sys.stdout.write("\b" * (self.width + 1))
 
     def update(self):
         self.value += 1
-        if self.value >= self.width:
+        if self.value == self.width:
             sys.stdout.write("]\n")
-        else:
+        if self.value < self.width:
             sys.stdout.write("=")
-            sys.stdout.flush()
+        sys.stdout.flush()
 
 
 def generate_frame(cmd_id, data=b''):
@@ -52,45 +51,39 @@ def generate_frame(cmd_id, data=b''):
     return frame
 
 
+def add_noise_to_frame(frame):
+    if isinstance(frame, bytes):
+        frame = bytearray(frame)
+    old_index = randrange(0, len(frame))
+    old_value = frame[old_index]
+    while True:
+        new_value = randrange(0, 256)
+        if new_value != old_value:
+            frame[old_index] = new_value
+            break
+    return frame
+
+
 def main(args):
     example_count = args.count
 
-    # generate positive examples
-    bar = ProgressBar(40, 'GP: ')
-    with open(args.path / 'positive_example.txt', 'w') as f:
+    # generate examples
+    bar = ProgressBar(40, 'Generating: ')
+    with open(args.path / 'positive_example.txt', 'w') as fp, open(args.path / 'negative_example.txt', 'w') as fn:
         for i in range(example_count):
             cmd_id = int.from_bytes(randbytes(2), 'little')
-            data = randbytes(randrange(0, 121))
-            f.write(f'{cmd_id:x}\n')
-            f.write(f'{data.hex(" ")}\n')
+            data = randbytes(randrange(0, args.data_size + 1))
+            fp.write(f'{cmd_id:04x}\n')
+            fp.write(f'{data.hex(" ")}\n')
+            fn.write(f'{cmd_id:04x}\n')
+            fn.write(f'{data.hex(" ")}\n')
+            frame = generate_frame(cmd_id, data)
             if i != example_count - 1:
-                f.write(f'{generate_frame(cmd_id, data).hex(" ")}\n')
+                fp.write(f'{frame.hex(" ")}\n')
+                fn.write(f'{add_noise_to_frame(frame).hex(" ")}\n')
             else:
-                f.write(f'{generate_frame(cmd_id, data).hex(" ")}')
-
-            if (i + 1) % (example_count // bar.width) == 0:
-                bar.update()
-
-    # generate negative examples
-    bar = ProgressBar(40, 'GN: ')
-    with open(args.path / 'negative_example.txt', 'w') as f:
-        for i in range(example_count):
-            cmd_id = int.from_bytes(randbytes(2), 'little')
-            data = randbytes(randrange(0, 121))
-            frame = bytearray(generate_frame(cmd_id, data))
-            old_index = randrange(0, len(frame))
-            old_value = frame[old_index]
-            while True:
-                new_value = randrange(0, 256)
-                if new_value != old_value:
-                    frame[old_index] = new_value
-                    break
-            f.write(f'{cmd_id:x}\n')
-            f.write(f'{data.hex(" ")}\n')
-            if i != example_count - 1:
-                f.write(f'{frame.hex(" ")}\n')
-            else:
-                f.write(f'{frame.hex(" ")}')
+                fp.write(f'{frame.hex(" ")}')
+                fn.write(f'{add_noise_to_frame(frame).hex(" ")}')
 
             if (i + 1) % (example_count // bar.width) == 0:
                 bar.update()
@@ -99,5 +92,6 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--count', type=int, default=10000)
+    parser.add_argument('-d', '--data-size', type=int, default=256)
     parser.add_argument('-p', '--path', type=pathlib.Path, default=pathlib.Path(__file__).resolve().parent)
     main(parser.parse_args())

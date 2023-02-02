@@ -25,10 +25,8 @@ extern "C"
 #endif
 
 #include <stdint.h>
+#include <stdbool.h>
 
-#define PROTOCOL_TRUE                           (1)
-#define PROTOCOL_FALSE                          (0)
-#define PROTOCOL_ERROR                          (-1)
 #define PROTOCOL_HEADER                         (0xA5)
 
 typedef enum
@@ -51,21 +49,22 @@ typedef struct
 
     /* Unpack state. */
     uint16_t                    max_data_length;
-    uint8_t*                    protocol_packet;    // The size must be larger than (max_data_length + 8).
+    uint8_t*                    protocol_packet_ptr;
+    uint32_t                    protocol_packet_size;
     protocol_unpack_step_e      unpack_step;
-    uint16_t                    index;
+    uint32_t                    index;
 } protocol_stream_t;
 
 /**
  * Test whether the device supports the protocol.
- * @return PROTOCOL_TRUE or PROTOCOL_FALSE
+ * @return true or false
  */
-extern int protocol_is_supported(void);
+extern bool protocol_is_supported(void);
 
 /**
  * Calculate the packaged frame size.
  * @param data_length The size of the data to be packed.
- * @return Returns PROTOCOL_ERROR when an error occurs, otherwise returns the frame size.
+ * @return Returns the calculated frame size.
  */
 extern int protocol_calculate_frame_size(uint16_t data_length);
 
@@ -74,20 +73,29 @@ extern int protocol_calculate_frame_size(uint16_t data_length);
  * @param cmd_id The cmd_id part of the frame.
  * @param data The data part of the frame.
  * @param data_length The data length of the frame.
- * @param buffer The output memory address.
- * @return Returns PROTOCOL_ERROR when an error occurs, otherwise returns the frame size.
+ * @param buffer The output memory.
+ * @return Returns the frame size.
  */
-extern int protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t data_length, uint8_t *buffer);
+extern uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t data_length, uint8_t *buffer);
 
 /**
  * Create the unpack stream object, allocate memory and initialize.
  * @param max_data_size The maximum data length contained in the frame.
+ * @param auto_reallocate Should the stream object be resized automatically. If false, memory will be allocated according to the maximum data length.
  * @return Pointer to the unpack object.
  */
-extern protocol_stream_t* protocol_create_unpack_stream(uint16_t max_data_length);
+extern protocol_stream_t *protocol_create_unpack_stream(uint16_t max_data_length, bool auto_reallocate);
 
 /**
- * Initialize the unpack stream object, but no memory will be allocated.
+ * Prepare memory for upcoming packets.
+ * @param unpack_stream Pointer to the unpack object.
+ * @param data_length The data length of the frame.
+ * @return Returns false when an error occurs, true otherwise.
+ */
+extern bool protocol_reallocate_unpack_stream(protocol_stream_t* unpack_stream, uint16_t data_length);
+
+/**
+ * Initialize the unpacking state of unpack stream object.
  * @param unpack_stream Pointer to the unpack object.
  */
 extern void protocol_initialize_unpack_stream(protocol_stream_t* unpack_stream);
@@ -102,9 +110,9 @@ extern void protocol_free_unpack_stream(protocol_stream_t* unpack_stream);
  * Parse the byte stream.
  * @param unpack_stream Pointer to the unpack object.
  * @param byte The byte read from the byte stream.
- * @return Returns PROTOCOL_TRUE when a data frame is successfully parsed, PROTOCOL_FALSE otherwise.
+ * @return Returns true when a data frame is successfully parsed, false otherwise.
  */
-extern int protocol_unpack_byte(protocol_stream_t* unpack_stream, uint8_t byte);
+extern bool protocol_unpack_byte(protocol_stream_t* unpack_stream, uint8_t byte);
 
 #ifdef __cplusplus
 }

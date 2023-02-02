@@ -2,3 +2,4 @@
 cmake-build-debug
 test/negative_example.txt
 test/positive_example.txt
+install

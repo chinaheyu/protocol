@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define PROTOCOL_HEADER_SIZE                    (6)
-#define PROTOCOL_HEADER_CRC_SIZE                (PROTOCOL_HEADER_SIZE + 2)
+#define PROTOCOL_HEADER_SIZE                    (6u)
+#define PROTOCOL_HEADER_CRC_SIZE                (PROTOCOL_HEADER_SIZE + 2u)
 
 /**
  * Utils
@@ -324,12 +324,12 @@ typedef struct {
 
 #pragma pack(pop)
 
-int protocol_is_supported(void)
+bool protocol_is_supported(void)
 {
     if (get_endianness() == 'l')
-        return PROTOCOL_TRUE;
+        return true;
     else
-        return PROTOCOL_FALSE;
+        return false;
 }
 
 int protocol_calculate_frame_size(uint16_t data_length)
@@ -342,9 +342,9 @@ int protocol_calculate_frame_size(uint16_t data_length)
     return data_length + PROTOCOL_HEADER_CRC_SIZE;
 }
 
-int protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t data_length, uint8_t *buffer)
+uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t data_length, uint8_t *buffer)
 {
-    int frame_size = protocol_calculate_frame_size(data_length);
+    int calculated_frame_size = protocol_calculate_frame_size(data_length);
 
     protocol_frame_header_t* p_header = (protocol_frame_header_t *)buffer;
     p_header->sof = PROTOCOL_HEADER;
@@ -358,19 +358,40 @@ int protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t 
     if(data_length > 0)
     {
         memcpy(p_header->p_data, data, data_length);
-        append_crc16(buffer, frame_size);
+        append_crc16(buffer, calculated_frame_size);
     }
 
-    return frame_size;
+    return calculated_frame_size;
 }
 
-protocol_stream_t* protocol_create_unpack_stream(uint16_t max_data_length)
+protocol_stream_t *protocol_create_unpack_stream(uint16_t max_data_length, bool auto_reallocate)
 {
     protocol_stream_t* unpack_stream = (protocol_stream_t*)malloc(sizeof(protocol_stream_t));
     unpack_stream->max_data_length = max_data_length;
-    unpack_stream->protocol_packet = (uint8_t*)malloc(unpack_stream->max_data_length + PROTOCOL_HEADER_CRC_SIZE);
+    unpack_stream->protocol_packet_ptr = NULL;
+    unpack_stream->protocol_packet_size = 0;
+    if (auto_reallocate)
+        protocol_reallocate_unpack_stream(unpack_stream, 0);
+    else
+        protocol_reallocate_unpack_stream(unpack_stream, unpack_stream->max_data_length);
     protocol_initialize_unpack_stream(unpack_stream);
     return unpack_stream;
+}
+
+bool protocol_reallocate_unpack_stream(protocol_stream_t* unpack_stream, uint16_t data_length)
+{
+    unpack_stream->protocol_packet_size = data_length + PROTOCOL_HEADER_CRC_SIZE;
+    if (unpack_stream->protocol_packet_ptr == NULL)
+    {
+        unpack_stream->protocol_packet_ptr = (uint8_t*)malloc(unpack_stream->protocol_packet_size);
+    }
+    else
+    {
+        unpack_stream->protocol_packet_ptr = (uint8_t*)realloc(unpack_stream->protocol_packet_ptr, unpack_stream->protocol_packet_size);
+    }
+    if (unpack_stream->protocol_packet_ptr == NULL)
+        return false;
+    return true;
 }
 
 void protocol_initialize_unpack_stream(protocol_stream_t * unpack_stream)
@@ -381,11 +402,11 @@ void protocol_initialize_unpack_stream(protocol_stream_t * unpack_stream)
 
 void protocol_free_unpack_stream(protocol_stream_t* unpack_stream)
 {
-    free(unpack_stream->protocol_packet);
+    free(unpack_stream->protocol_packet_ptr);
     free(unpack_stream);
 }
 
-int protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
+bool protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
 {
     switch (unpack_stream->unpack_step)
     {
@@ -394,47 +415,47 @@ int protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
             if (byte == PROTOCOL_HEADER)
             {
                 unpack_stream->unpack_step = STEP_CMD_LOW;
-                unpack_stream->protocol_packet[unpack_stream->index++] = byte;
+                unpack_stream->protocol_packet_ptr[unpack_stream->index++] = byte;
             }
             else
             {
                 unpack_stream->index = 0;
             }
 
-            return PROTOCOL_FALSE;
+            return false;
         }
 
         case STEP_CMD_LOW:
         {
             unpack_stream->cmd_id = byte;
-            unpack_stream->protocol_packet[unpack_stream->index++] = byte;
+            unpack_stream->protocol_packet_ptr[unpack_stream->index++] = byte;
             unpack_stream->unpack_step = STEP_CMD_HIGH;
 
-            return PROTOCOL_FALSE;
+            return false;
         }
 
         case STEP_CMD_HIGH:
         {
             unpack_stream->cmd_id |= (byte << 8);
-            unpack_stream->protocol_packet[unpack_stream->index++] = byte;
+            unpack_stream->protocol_packet_ptr[unpack_stream->index++] = byte;
             unpack_stream->unpack_step = STEP_LENGTH_LOW;
 
-            return PROTOCOL_FALSE;
+            return false;
         }
 
         case STEP_LENGTH_LOW:
         {
             unpack_stream->data_len = byte;
-            unpack_stream->protocol_packet[unpack_stream->index++] = byte;
+            unpack_stream->protocol_packet_ptr[unpack_stream->index++] = byte;
             unpack_stream->unpack_step = STEP_LENGTH_HIGH;
 
-            return PROTOCOL_FALSE;
+            return false;
         }
 
         case STEP_LENGTH_HIGH:
         {
             unpack_stream->data_len |= (byte << 8);
-            unpack_stream->protocol_packet[unpack_stream->index++] = byte;
+            unpack_stream->protocol_packet_ptr[unpack_stream->index++] = byte;
 
             if (unpack_stream->data_len <= unpack_stream->max_data_length)
             {
@@ -442,77 +463,78 @@ int protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
             }
             else
             {
-                unpack_stream->unpack_step = STEP_HEADER_SOF;
-                unpack_stream->index = 0;
+                // The data length exceeds the maximum value.
+                protocol_initialize_unpack_stream(unpack_stream);
             }
 
-            return PROTOCOL_FALSE;
+            return false;
         }
 
         case STEP_HEADER_CRC8:
         {
-            unpack_stream->protocol_packet[unpack_stream->index++] = byte;
+            unpack_stream->protocol_packet_ptr[unpack_stream->index++] = byte;
 
             if (unpack_stream->index == PROTOCOL_HEADER_SIZE)
             {
-                if (verify_crc8(unpack_stream->protocol_packet, PROTOCOL_HEADER_SIZE))
+                if (verify_crc8(unpack_stream->protocol_packet_ptr, PROTOCOL_HEADER_SIZE))
                 {
                     if (unpack_stream->data_len == 0)
                     {
-                        // Drop the frame tail.
-                        unpack_stream->unpack_step = STEP_HEADER_SOF;
-                        unpack_stream->index = 0;
+                        // Data length is zero, drop the frame tail.
                         unpack_stream->data = NULL;
-                        return PROTOCOL_TRUE;
+                        protocol_initialize_unpack_stream(unpack_stream);
+                        return true;
                     }
 
+                    // Reallocate memory.
+                    if (unpack_stream->protocol_packet_size < unpack_stream->data_len + PROTOCOL_HEADER_CRC_SIZE)
+                    {
+                        protocol_reallocate_unpack_stream(unpack_stream, unpack_stream->data_len);
+                    }
                     unpack_stream->unpack_step = STEP_DATA_CRC16;
                 }
                 else
                 {
-                    unpack_stream->unpack_step = STEP_HEADER_SOF;
-                    unpack_stream->index = 0;
+                    // The frame header crc check failed.
+                    protocol_initialize_unpack_stream(unpack_stream);
                 }
             }
 
             if (unpack_stream->index > PROTOCOL_HEADER_SIZE)
             {
-                unpack_stream->unpack_step = STEP_HEADER_SOF;
-                unpack_stream->index = 0;
+                // The index should not be greater than PROTOCOL_HEADER_SIZE, probably because uninitialized object.
+                protocol_initialize_unpack_stream(unpack_stream);
             }
 
-            return PROTOCOL_FALSE;
+            return false;
         }
 
         case STEP_DATA_CRC16:
         {
             if (unpack_stream->index < (PROTOCOL_HEADER_CRC_SIZE + unpack_stream->data_len))
             {
-                unpack_stream->protocol_packet[unpack_stream->index++] = byte;
+                unpack_stream->protocol_packet_ptr[unpack_stream->index++] = byte;
             }
             if (unpack_stream->index >= (PROTOCOL_HEADER_CRC_SIZE + unpack_stream->data_len))
             {
-                unpack_stream->unpack_step = STEP_HEADER_SOF;
-                unpack_stream->index = 0;
+                // Unpacking should be restarted regardless of whether the crc check is successful or not.
+                protocol_initialize_unpack_stream(unpack_stream);
 
-                if (verify_crc16(unpack_stream->protocol_packet, PROTOCOL_HEADER_CRC_SIZE + unpack_stream->data_len))
+                if (verify_crc16(unpack_stream->protocol_packet_ptr, PROTOCOL_HEADER_CRC_SIZE + unpack_stream->data_len))
                 {
                     // Received a valid frame.
-                    unpack_stream->data = unpack_stream->protocol_packet + PROTOCOL_HEADER_SIZE;
-                    return PROTOCOL_TRUE;
+                    unpack_stream->data = unpack_stream->protocol_packet_ptr + PROTOCOL_HEADER_SIZE;
+                    return true;
                 }
             }
 
-            return PROTOCOL_FALSE;
+            return false;
         }
 
         default:
         {
-            unpack_stream->unpack_step = STEP_HEADER_SOF;
-            unpack_stream->index = 0;
-            return PROTOCOL_FALSE;
+            protocol_initialize_unpack_stream(unpack_stream);
+            return false;
         }
     }
-
 }
-

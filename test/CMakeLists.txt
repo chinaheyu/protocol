@@ -12,5 +12,7 @@ add_dependencies(protocol_test_executable protocol)
 target_link_libraries(protocol_test_executable protocol)
 
 # generate examples
-find_package(Python COMPONENTS Interpreter)
-execute_process(COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/generate_examples.py -c 100000 WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
+if((NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/positive_example.txt") OR (NOT EXISTS "${CMAKE_CURRENT_LIST_DIR}/negative_example.txt"))
+    find_package(Python COMPONENTS Interpreter)
+    execute_process(COMMAND ${Python_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/generate_examples.py -c 10000 -d 512 WORKING_DIRECTORY ${CMAKE_CURRENT_LIST_DIR})
+endif()
