@@ -24,10 +24,24 @@ extern "C"
 {
 #endif
 
-#include <stdint.h>
-#include <stdbool.h>
+#include <stddef.h>     // For NULL
+#include <stdint.h>     // For int types
+#include <stdbool.h>    // For bool true false
 
+/* SOF of the protocol frame header. */
 #define PROTOCOL_HEADER                         (0xA5)
+
+/* Using stdlib to dynamic allocate memory for unpack stream.
+ * If you disable stdlib, you need to manage the memory in the unpacking stream manually.
+ */
+#ifndef PROTOCOL_USING_STDLIB
+#define PROTOCOL_USING_STDLIB 1
+#endif
+
+/* Using memcpy function from string.h. */
+#ifndef PROTOCOL_USING_STRING
+#define PROTOCOL_USING_STRING 1
+#endif
 
 typedef enum
 {
@@ -48,10 +62,10 @@ typedef struct
     uint8_t*                    data;
 
     /* Unpack state. */
-    uint16_t                    max_data_length;
-    uint8_t*                    protocol_packet_ptr;
-    uint32_t                    protocol_packet_size;
-    protocol_unpack_step_e      unpack_step;
+    uint16_t                    max_data_length;        // Any frames over this data length will be discarded.
+    uint8_t*                    protocol_packet_ptr;    // Buffer used to receive frames.
+    uint32_t                    protocol_packet_size;   // The size of the buffer, which should be (data_length + 8).
+    protocol_unpack_step_e      unpack_step;            // Next steps for unpacking.
     uint32_t                    index;
 } protocol_stream_t;
 
@@ -78,13 +92,14 @@ extern int protocol_calculate_frame_size(uint16_t data_length);
  */
 extern uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t data_length, uint8_t *buffer);
 
+#if PROTOCOL_USING_STDLIB == 1
 /**
  * Create the unpack stream object, allocate memory and initialize.
  * @param max_data_size The maximum data length contained in the frame.
  * @param auto_reallocate Should the stream object be resized automatically. If false, memory will be allocated according to the maximum data length.
  * @return Pointer to the unpack object.
  */
-extern protocol_stream_t *protocol_create_unpack_stream(uint16_t max_data_length, bool auto_reallocate);
+extern protocol_stream_t* protocol_create_unpack_stream(uint16_t max_data_length, bool auto_reallocate);
 
 /**
  * Prepare memory for upcoming packets.
@@ -95,16 +110,25 @@ extern protocol_stream_t *protocol_create_unpack_stream(uint16_t max_data_length
 extern bool protocol_reallocate_unpack_stream(protocol_stream_t* unpack_stream, uint16_t data_length);
 
 /**
- * Initialize the unpacking state of unpack stream object.
- * @param unpack_stream Pointer to the unpack object.
- */
-extern void protocol_initialize_unpack_stream(protocol_stream_t* unpack_stream);
-
-/**
  * Free the unpack stream object.
  * @param unpack_stream Pointer to the unpack object.
  */
 extern void protocol_free_unpack_stream(protocol_stream_t* unpack_stream);
+#endif
+
+/**
+ * Create the unpack stream object with the specified memory area.
+ * @param unpack_stream Pointer to the unpack object.
+ * @param max_data_length The maximum data length of the frame.
+ * @param buffer Memory buffer with the size of max_data_length.
+ */
+extern void protocol_static_create_unpack_stream(protocol_stream_t* unpack_stream, uint16_t max_data_length, uint8_t* buffer);
+
+/**
+ * Initialize the unpacking state of unpack stream object.
+ * @param unpack_stream Pointer to the unpack object.
+ */
+extern void protocol_initialize_unpack_stream(protocol_stream_t* unpack_stream);
 
 /**
  * Parse the byte stream.

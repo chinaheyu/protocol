@@ -1,9 +1,26 @@
 #include "protocol.h"
+
+#if PROTOCOL_USING_STRING == 1
 #include <string.h>
+#else
+static void protocol_memcpy(void *dest, const void *src, uint32_t n)
+{
+    const char *csrc = (const char *) src;
+    char *cdest = (char *) dest;
+    for (int i = 0; i < n; i++)
+        cdest[i] = csrc[i];
+}
+#define memcpy protocol_memcpy
+#endif
+
+#if PROTOCOL_USING_STDLIB == 1
 #include <stdlib.h>
+#endif
 
 #define PROTOCOL_HEADER_SIZE                    (6u)
 #define PROTOCOL_HEADER_CRC_SIZE                (PROTOCOL_HEADER_SIZE + 2u)
+#define USING_CRC8
+#define USING_CRC16
 
 /**
  * Utils
@@ -22,6 +39,7 @@ static char get_endianness()
     return (char)endian_test.ul;
 }
 
+#ifdef USING_CRC8
 /*
  * CRC8 Table:
  * width = 8
@@ -108,7 +126,9 @@ static void append_crc8(uint8_t *pchMessage, uint32_t dwLength)
 
     pchMessage[dwLength - 1] = ucCRC;
 }
+#endif
 
+#ifdef USING_CRC16
 /*
  * CRC16 Table:
  * width = 16
@@ -199,7 +219,9 @@ static void append_crc16(uint8_t *pchMessage, uint32_t dwLength)
     pchMessage[dwLength - 2] = (uint8_t)(wCRC & 0x00ff);
     pchMessage[dwLength - 1] = (uint8_t)((wCRC >> 8) & 0x00ff);
 }
+#endif
 
+#ifdef USING_CRC32
 /*
  * CRC32 Table:
  * width = 32
@@ -231,7 +253,7 @@ static const uint32_t CRC32_TAB[] =
 };
 
 /*
-**  Descriptions: CRC16 checksum function
+**  Descriptions: CRC32 checksum function
 **  Input:        Data to check,Stream length
 **  Output:       CRC checksum
 */
@@ -255,7 +277,7 @@ static uint32_t get_crc32(uint8_t *pchMessage, uint32_t dwLength)
 }
 
 /*
-**  Descriptions: CRC16 Verify function
+**  Descriptions: CRC32 Verify function
 **  Input:        Data to Verify,Stream length = Data + checksum
 **  Output:       True or False (CRC Verify Result)
 */
@@ -278,7 +300,7 @@ static uint32_t verify_crc32(uint8_t *pchMessage, uint32_t dwLength)
 }
 
 /*
-**  Descriptions: append CRC16 to the end of data
+**  Descriptions: append CRC32 to the end of data
 **  Input:        Data to CRC and append,Stream length = Data + checksum
 **  Output:       True or False (CRC Verify Result)
 */
@@ -297,6 +319,7 @@ static void append_crc32(uint8_t *pchMessage, uint32_t dwLength)
     pchMessage[dwLength - 2] = (uint8_t)((wCRC >> 16) & 0xff);
     pchMessage[dwLength - 1] = (uint8_t)((wCRC >> 24) & 0xff);
 }
+#endif
 
 /**
  * Protocol
@@ -364,6 +387,7 @@ uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint
     return calculated_frame_size;
 }
 
+#if PROTOCOL_USING_STDLIB == 1
 protocol_stream_t *protocol_create_unpack_stream(uint16_t max_data_length, bool auto_reallocate)
 {
     protocol_stream_t* unpack_stream = (protocol_stream_t*)malloc(sizeof(protocol_stream_t));
@@ -394,16 +418,25 @@ bool protocol_reallocate_unpack_stream(protocol_stream_t* unpack_stream, uint16_
     return true;
 }
 
-void protocol_initialize_unpack_stream(protocol_stream_t * unpack_stream)
-{
-    unpack_stream->unpack_step = STEP_HEADER_SOF;
-    unpack_stream->index = 0;
-}
-
 void protocol_free_unpack_stream(protocol_stream_t* unpack_stream)
 {
     free(unpack_stream->protocol_packet_ptr);
     free(unpack_stream);
+}
+#endif
+
+void protocol_static_create_unpack_stream(protocol_stream_t* unpack_stream, uint16_t max_data_length, uint8_t* buffer)
+{
+    unpack_stream->max_data_length = max_data_length;
+    unpack_stream->protocol_packet_ptr = buffer;
+    unpack_stream->protocol_packet_size = max_data_length + PROTOCOL_HEADER_CRC_SIZE;
+    protocol_initialize_unpack_stream(unpack_stream);
+}
+
+void protocol_initialize_unpack_stream(protocol_stream_t * unpack_stream)
+{
+    unpack_stream->unpack_step = STEP_HEADER_SOF;
+    unpack_stream->index = 0;
 }
 
 bool protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
@@ -486,10 +519,16 @@ bool protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
                         return true;
                     }
 
-                    // Reallocate memory.
                     if (unpack_stream->protocol_packet_size < unpack_stream->data_len + PROTOCOL_HEADER_CRC_SIZE)
                     {
+#if PROTOCOL_USING_STDLIB == 1
+                        // Reallocate memory.
                         protocol_reallocate_unpack_stream(unpack_stream, unpack_stream->data_len);
+#else
+                        // Memory is not enough to receive the total frame.
+                        // Please reinitialize the unpack stream object manually, otherwise a memory error will occur.
+                        // Or you can manually adjust the packet buffer size.
+#endif
                     }
                     unpack_stream->unpack_step = STEP_DATA_CRC16;
                 }
@@ -511,6 +550,13 @@ bool protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
 
         case STEP_DATA_CRC16:
         {
+            if (unpack_stream->protocol_packet_size < unpack_stream->data_len + PROTOCOL_HEADER_CRC_SIZE)
+            {
+                // Memory is not enough to receive the total frame.
+                protocol_initialize_unpack_stream(unpack_stream);
+                return false;
+            }
+
             if (unpack_stream->index < (PROTOCOL_HEADER_CRC_SIZE + unpack_stream->data_len))
             {
                 unpack_stream->protocol_packet_ptr[unpack_stream->index++] = byte;

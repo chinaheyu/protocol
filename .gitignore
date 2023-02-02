@@ -3,3 +3,7 @@ cmake-build-debug
 test/negative_example.txt
 test/positive_example.txt
 install
+wrappers/micropython/.idea
+wrappers/micropython/build
+wrappers/micropython/micropython
+wrappers/micropython/py_protocol.mpy
