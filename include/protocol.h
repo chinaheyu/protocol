@@ -80,7 +80,7 @@ extern bool protocol_is_supported(void);
  * @param data_length The size of the data to be packed.
  * @return Returns the calculated frame size.
  */
-extern int protocol_calculate_frame_size(uint16_t data_length);
+extern uint32_t protocol_calculate_frame_size(uint16_t data_length);
 
 /**
  * Pack the data into memory.

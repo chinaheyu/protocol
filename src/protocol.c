@@ -2,6 +2,7 @@
 
 #if PROTOCOL_USING_STRING == 1
 #include <string.h>
+#define protocol_memcpy memcpy
 #else
 static void protocol_memcpy(void *dest, const void *src, uint32_t n)
 {
@@ -10,7 +11,6 @@ static void protocol_memcpy(void *dest, const void *src, uint32_t n)
     for (int i = 0; i < n; i++)
         cdest[i] = csrc[i];
 }
-#define memcpy protocol_memcpy
 #endif
 
 #if PROTOCOL_USING_STDLIB == 1
@@ -167,7 +167,7 @@ static const uint16_t CRC16_TAB[256] =
 static uint16_t get_crc16(uint8_t *pchMessage, uint32_t dwLength)
 {
     uint8_t chData;
-    uint16_t wCRC = CRC16_INIT;
+    volatile uint16_t wCRC = CRC16_INIT;
 
     if (pchMessage == 0)
     {
@@ -177,7 +177,7 @@ static uint16_t get_crc16(uint8_t *pchMessage, uint32_t dwLength)
     while (dwLength--)
     {
         chData = *pchMessage++;
-        (wCRC) = ((uint16_t)(wCRC) >> 8)  ^ CRC16_TAB[((uint16_t)(wCRC) ^ (uint16_t)(chData)) & 0x00ff];
+        (wCRC) = ((uint16_t)(wCRC) >> 8) ^ CRC16_TAB[((uint16_t)(wCRC) ^ (uint16_t)(chData)) & 0x00ff];
     }
 
     return wCRC;
@@ -324,28 +324,6 @@ static void append_crc32(uint8_t *pchMessage, uint32_t dwLength)
 /**
  * Protocol
  */
-#ifdef __CC_ARM
-#pragma anon_unions
-#endif
-
-#pragma pack(push)
-#pragma pack(1)
-
-typedef struct {
-    uint8_t sof;
-    union {
-        uint16_t cmd_id;
-        uint8_t _cmd_id[2];
-    };
-    union {
-        uint16_t data_length;
-        uint8_t _data_length[2];
-    };
-    uint8_t crc8;
-    uint8_t p_data[];
-} protocol_frame_header_t;
-
-#pragma pack(pop)
 
 bool protocol_is_supported(void)
 {
@@ -355,7 +333,7 @@ bool protocol_is_supported(void)
         return false;
 }
 
-int protocol_calculate_frame_size(uint16_t data_length)
+uint32_t protocol_calculate_frame_size(uint16_t data_length)
 {
     if (data_length == 0)
     {
@@ -367,20 +345,19 @@ int protocol_calculate_frame_size(uint16_t data_length)
 
 uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t data_length, uint8_t *buffer)
 {
-    int calculated_frame_size = protocol_calculate_frame_size(data_length);
+    uint32_t calculated_frame_size = protocol_calculate_frame_size(data_length);
 
-    protocol_frame_header_t* p_header = (protocol_frame_header_t *)buffer;
-    p_header->sof = PROTOCOL_HEADER;
-    p_header->_cmd_id[0] = (uint8_t)(cmd_id & 0x00ff);
-    p_header->_cmd_id[1] = (uint8_t)((cmd_id >> 8) & 0x00ff);
-    p_header->_data_length[0] = (uint8_t)(data_length & 0x00ff);
-    p_header->_data_length[1] = (uint8_t)((data_length >> 8) & 0x00ff);
+    buffer[0] = PROTOCOL_HEADER;
+    buffer[1] = (uint8_t)(cmd_id & 0x00ff);
+    buffer[2] = (uint8_t)((cmd_id >> 8) & 0x00ff);
+    buffer[3] = (uint8_t)(data_length & 0x00ff);
+    buffer[4] = (uint8_t)((data_length >> 8) & 0x00ff);
 
     append_crc8(buffer, PROTOCOL_HEADER_SIZE);
 
     if(data_length > 0)
     {
-        memcpy(p_header->p_data, data, data_length);
+        protocol_memcpy(buffer + PROTOCOL_HEADER_SIZE, data, data_length);
         append_crc16(buffer, calculated_frame_size);
     }
 
