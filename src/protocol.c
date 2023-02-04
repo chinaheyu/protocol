@@ -25,7 +25,7 @@ static void protocol_memcpy(void *dest, const void *src, uint32_t n)
 /**
  * Utils
  */
-static union { char c[4]; unsigned long ul; } endian_test = {{ 'l', '?', '?', 'b' } };
+static const union { char c[4]; unsigned long ul; } endian_test = {{ 'l', '?', '?', 'b' } };
 #define ENDIANNESS ((char)endian_test.ul)
 
 /*
@@ -167,7 +167,7 @@ static const uint16_t CRC16_TAB[256] =
 static uint16_t get_crc16(uint8_t *pchMessage, uint32_t dwLength)
 {
     uint8_t chData;
-    volatile uint16_t wCRC = CRC16_INIT;
+    uint16_t wCRC = CRC16_INIT;
 
     if (pchMessage == 0)
     {

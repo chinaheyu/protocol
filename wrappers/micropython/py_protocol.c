@@ -19,7 +19,7 @@ STATIC mp_obj_t pack_data(mp_obj_t cmd_id, mp_obj_t data)
     mp_get_buffer_raise(data, &_data, MP_BUFFER_READ);
     uint32_t frame_size = protocol_calculate_frame_size(_data.len);
     uint8_t* out = (uint8_t*)m_malloc(frame_size);
-    // FIXME: >>> p.pack_data(0x1234,b'abcd') device disconnected
+    // FIXME: >>> p.pack_data(0x1234,b'abcd') device disconnected. Maybe compiler optimization error.
     protocol_pack_data_to_buffer(_cmd_id, _data.buf, _data.len, out);
     return mp_obj_new_bytearray_by_ref(frame_size, out);
 }
@@ -137,6 +137,10 @@ mp_obj_t mpy_init(mp_obj_fun_bc_t *self, size_t n_args, size_t n_kw, mp_obj_t *a
     // This must be first, it sets up the globals dict and other things
     MP_DYNRUNTIME_INIT_ENTRY
 
+    // FIXME: >>> import py_protocol as p;a=p.ProtocolFrame(0x1234,b'abcd');print(dir(a))
+    // ['__class__', 'pack']
+    // It should looks like ['__class__', 'cmd_id', 'data', 'pack']
+    // The UnpackStream object also has this issue.
     mp_type_ProtocolFrame.base.type = (void*)&mp_type_type;
     mp_type_ProtocolFrame.name = MP_QSTR_ProtocolFrame;
     mp_type_ProtocolFrame.make_new = ProtocolFrame_make_new;
