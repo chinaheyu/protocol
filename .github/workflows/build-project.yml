@@ -20,16 +20,16 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=ON -DINSTALL_PYTHON_BINDINGS=OFF
           cmake --build .
-          cmake --install .
+          cmake --install . --prefix install
           ctest
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v3
         with:
           name: artifact_ubuntu
-          path: install/*
+          path: build/install/*
 
   test-on-windows:
 
@@ -46,16 +46,16 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=ON -DINSTALL_PYTHON_BINDINGS=OFF
           cmake --build . --config Release
-          cmake --install .
+          cmake --install . --prefix install
           ctest
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v3
         with:
           name: artifact_windows
-          path: install/*
+          path: build/install/*
 
   test-on-macos:
 
@@ -72,13 +72,13 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DBUILD_TEST=ON -DINSTALL_PYTHON_BINDINGS=OFF
           cmake --build .
-          cmake --install .
+          cmake --install . --prefix install
           ctest
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v3
         with:
           name: artifact_macos
-          path: install/*
+          path: build/install/*

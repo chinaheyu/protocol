@@ -1,6 +1,6 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include "protocol.h"
 
 namespace py = pybind11;
@@ -10,7 +10,7 @@ bool is_supported() {
     return protocol_is_supported();
 }
 
-ssize_t calculate_frame_size(uint16_t data_length) {
+size_t calculate_frame_size(uint16_t data_length) {
     return protocol_calculate_frame_size(data_length);
 }
 

@@ -34,7 +34,7 @@ static const union { char c[4]; unsigned long ul; } endian_test = {{ 'l', '?', '
  * 'b': big endian.
  * '?': Unknown.
  */
-static char get_endianness()
+static char get_endianness(void)
 {
     return (char)endian_test.ul;
 }
