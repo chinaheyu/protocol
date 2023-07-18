@@ -4,7 +4,7 @@
 #include <string.h>
 #define protocol_memcpy memcpy
 #else
-static void protocol_memcpy(void *dest, const void *src, uint32_t n)
+static void protocol_memcpy(void *dest, const void *src, size_t n)
 {
     const char *csrc = (const char *) src;
     char *cdest = (char *) dest;
@@ -348,7 +348,7 @@ size_t protocol_calculate_frame_size(size_t data_length)
 
 size_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, size_t data_length, uint8_t *buffer)
 {
-    uint32_t calculated_frame_size = protocol_calculate_frame_size(data_length);
+    size_t calculated_frame_size = protocol_calculate_frame_size(data_length);
 
     buffer[0] = PROTOCOL_HEADER;
     buffer[1] = (uint8_t)(cmd_id & 0x00ff);
