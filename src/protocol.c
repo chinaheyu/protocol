@@ -15,6 +15,9 @@ static void protocol_memcpy(void *dest, const void *src, uint32_t n)
 
 #if PROTOCOL_USING_STDLIB == 1
 #include <stdlib.h>
+#define protocol_malloc malloc
+#define protocol_realloc realloc
+#define protocol_free free
 #endif
 
 #define PROTOCOL_HEADER_SIZE                    (6u)
@@ -364,10 +367,10 @@ uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint
     return calculated_frame_size;
 }
 
-#if PROTOCOL_USING_STDLIB == 1
+#if PROTOCOL_DYNAMIC_BUFFER == 1
 protocol_stream_t *protocol_create_unpack_stream(uint16_t max_data_length, bool auto_reallocate)
 {
-    protocol_stream_t* unpack_stream = (protocol_stream_t*)malloc(sizeof(protocol_stream_t));
+    protocol_stream_t* unpack_stream = (protocol_stream_t*)protocol_malloc(sizeof(protocol_stream_t));
     unpack_stream->max_data_length = max_data_length;
     unpack_stream->protocol_packet_ptr = NULL;
     unpack_stream->protocol_packet_size = 0;
@@ -384,11 +387,11 @@ bool protocol_reallocate_unpack_stream(protocol_stream_t* unpack_stream, uint16_
     unpack_stream->protocol_packet_size = data_length + PROTOCOL_HEADER_CRC_SIZE;
     if (unpack_stream->protocol_packet_ptr == NULL)
     {
-        unpack_stream->protocol_packet_ptr = (uint8_t*)malloc(unpack_stream->protocol_packet_size);
+        unpack_stream->protocol_packet_ptr = (uint8_t*)protocol_malloc(unpack_stream->protocol_packet_size);
     }
     else
     {
-        unpack_stream->protocol_packet_ptr = (uint8_t*)realloc(unpack_stream->protocol_packet_ptr, unpack_stream->protocol_packet_size);
+        unpack_stream->protocol_packet_ptr = (uint8_t*)protocol_realloc(unpack_stream->protocol_packet_ptr, unpack_stream->protocol_packet_size);
     }
     if (unpack_stream->protocol_packet_ptr == NULL)
         return false;
@@ -397,16 +400,16 @@ bool protocol_reallocate_unpack_stream(protocol_stream_t* unpack_stream, uint16_
 
 void protocol_free_unpack_stream(protocol_stream_t* unpack_stream)
 {
-    free(unpack_stream->protocol_packet_ptr);
-    free(unpack_stream);
+    protocol_free(unpack_stream->protocol_packet_ptr);
+    protocol_free(unpack_stream);
 }
 #endif
 
-void protocol_static_create_unpack_stream(protocol_stream_t* unpack_stream, uint16_t max_data_length, uint8_t* buffer)
+void protocol_static_create_unpack_stream(protocol_stream_t* unpack_stream, uint8_t* buffer, uint16_t buffer_size)
 {
-    unpack_stream->max_data_length = max_data_length;
+    unpack_stream->max_data_length = buffer_size - PROTOCOL_HEADER_CRC_SIZE;
     unpack_stream->protocol_packet_ptr = buffer;
-    unpack_stream->protocol_packet_size = max_data_length + PROTOCOL_HEADER_CRC_SIZE;
+    unpack_stream->protocol_packet_size = buffer_size;
     protocol_initialize_unpack_stream(unpack_stream);
 }
 
@@ -498,7 +501,7 @@ bool protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
 
                     if (unpack_stream->protocol_packet_size < unpack_stream->data_len + PROTOCOL_HEADER_CRC_SIZE)
                     {
-#if PROTOCOL_USING_STDLIB == 1
+#if PROTOCOL_DYNAMIC_BUFFER == 1
                         // Reallocate memory.
                         protocol_reallocate_unpack_stream(unpack_stream, unpack_stream->data_len);
 #else

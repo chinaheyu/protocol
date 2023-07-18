@@ -3,8 +3,11 @@ cmake-build-debug
 test/negative_example.txt
 test/positive_example.txt
 install
+build
 wrappers/micropython/.idea
 wrappers/micropython/build
 wrappers/micropython/micropython
 wrappers/micropython/py_protocol.mpy
 wrappers/src
+test/__pycache__
+.vscode

@@ -24,23 +24,39 @@ extern "C"
 {
 #endif
 
-#include <stddef.h>     // For NULL
-#include <stdint.h>     // For int types
-#include <stdbool.h>    // For bool true false
+#ifdef __cplusplus
+    #define NULL 0
+#else
+    #define NULL ((void *)0)
+    #define bool  _Bool
+    #define false 0
+    #define true  1
+#endif
+
+typedef unsigned char      uint8_t;
+typedef unsigned short     uint16_t;
+typedef unsigned int       uint32_t;
 
 /* SOF of the protocol frame header. */
 #define PROTOCOL_HEADER                         (0xA5)
 
+/* Let protocol stream object auto realloc buffer size. */
+#ifndef PROTOCOL_DYNAMIC_BUFFER
+    #define PROTOCOL_DYNAMIC_BUFFER 1
+#endif
+
 /* Using stdlib to dynamic allocate memory for unpack stream.
  * If you disable stdlib, you need to manage the memory in the unpacking stream manually.
  */
-#ifndef PROTOCOL_USING_STDLIB
-#define PROTOCOL_USING_STDLIB 1
+#if PROTOCOL_DYNAMIC_BUFFER == 1
+    #ifndef PROTOCOL_USING_STDLIB
+        #define PROTOCOL_USING_STDLIB 1
+    #endif
 #endif
 
 /* Using memcpy function from string.h. */
 #ifndef PROTOCOL_USING_STRING
-#define PROTOCOL_USING_STRING 1
+    #define PROTOCOL_USING_STRING 1
 #endif
 
 typedef enum
@@ -92,7 +108,7 @@ extern uint32_t protocol_calculate_frame_size(uint16_t data_length);
  */
 extern uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t data_length, uint8_t *buffer);
 
-#if PROTOCOL_USING_STDLIB == 1
+#if PROTOCOL_DYNAMIC_BUFFER == 1
 /**
  * Create the unpack stream object, allocate memory and initialize.
  * @param max_data_size The maximum data length contained in the frame.
@@ -119,10 +135,10 @@ extern void protocol_free_unpack_stream(protocol_stream_t* unpack_stream);
 /**
  * Create the unpack stream object with the specified memory area.
  * @param unpack_stream Pointer to the unpack object.
- * @param max_data_length The maximum data length of the frame.
- * @param buffer Memory buffer with the size of max_data_length.
+ * @param buffer Memory buffer with the size of buffer_size.
+ * @param buffer_size The size of buffer.
  */
-extern void protocol_static_create_unpack_stream(protocol_stream_t* unpack_stream, uint16_t max_data_length, uint8_t* buffer);
+extern void protocol_static_create_unpack_stream(protocol_stream_t* unpack_stream, uint8_t* buffer, uint16_t buffer_size);
 
 /**
  * Initialize the unpacking state of unpack stream object.
