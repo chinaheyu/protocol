@@ -336,7 +336,7 @@ bool protocol_is_supported(void)
         return false;
 }
 
-uint32_t protocol_calculate_frame_size(uint16_t data_length)
+size_t protocol_calculate_frame_size(size_t data_length)
 {
     if (data_length == 0)
     {
@@ -346,7 +346,7 @@ uint32_t protocol_calculate_frame_size(uint16_t data_length)
     return data_length + PROTOCOL_HEADER_CRC_SIZE;
 }
 
-uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint16_t data_length, uint8_t *buffer)
+size_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, size_t data_length, uint8_t *buffer)
 {
     uint32_t calculated_frame_size = protocol_calculate_frame_size(data_length);
 
@@ -368,21 +368,25 @@ uint32_t protocol_pack_data_to_buffer(uint16_t cmd_id, const uint8_t *data, uint
 }
 
 #if PROTOCOL_DYNAMIC_BUFFER == 1
-protocol_stream_t *protocol_create_unpack_stream(uint16_t max_data_length, bool auto_reallocate)
+protocol_stream_t *protocol_create_unpack_stream(size_t max_data_length, bool auto_reallocate)
 {
     protocol_stream_t* unpack_stream = (protocol_stream_t*)protocol_malloc(sizeof(protocol_stream_t));
+    if (unpack_stream == NULL)
+        return NULL;
     unpack_stream->max_data_length = max_data_length;
     unpack_stream->protocol_packet_ptr = NULL;
     unpack_stream->protocol_packet_size = 0;
     if (auto_reallocate)
-        protocol_reallocate_unpack_stream(unpack_stream, 0);
+        auto_reallocate = protocol_reallocate_unpack_stream(unpack_stream, 0);
     else
-        protocol_reallocate_unpack_stream(unpack_stream, unpack_stream->max_data_length);
+        auto_reallocate = protocol_reallocate_unpack_stream(unpack_stream, unpack_stream->max_data_length);
+    if (!auto_reallocate)
+        return NULL;
     protocol_initialize_unpack_stream(unpack_stream);
     return unpack_stream;
 }
 
-bool protocol_reallocate_unpack_stream(protocol_stream_t* unpack_stream, uint16_t data_length)
+bool protocol_reallocate_unpack_stream(protocol_stream_t* unpack_stream, size_t data_length)
 {
     unpack_stream->protocol_packet_size = data_length + PROTOCOL_HEADER_CRC_SIZE;
     if (unpack_stream->protocol_packet_ptr == NULL)
@@ -394,7 +398,11 @@ bool protocol_reallocate_unpack_stream(protocol_stream_t* unpack_stream, uint16_
         unpack_stream->protocol_packet_ptr = (uint8_t*)protocol_realloc(unpack_stream->protocol_packet_ptr, unpack_stream->protocol_packet_size);
     }
     if (unpack_stream->protocol_packet_ptr == NULL)
+    {
+        unpack_stream->max_data_length = 0;
+        unpack_stream->protocol_packet_size = 0;
         return false;
+    }
     return true;
 }
 
@@ -405,7 +413,7 @@ void protocol_free_unpack_stream(protocol_stream_t* unpack_stream)
 }
 #endif
 
-void protocol_static_create_unpack_stream(protocol_stream_t* unpack_stream, uint8_t* buffer, uint16_t buffer_size)
+void protocol_static_create_unpack_stream(protocol_stream_t* unpack_stream, uint8_t* buffer, size_t buffer_size)
 {
     unpack_stream->max_data_length = buffer_size - PROTOCOL_HEADER_CRC_SIZE;
     unpack_stream->protocol_packet_ptr = buffer;
@@ -413,13 +421,13 @@ void protocol_static_create_unpack_stream(protocol_stream_t* unpack_stream, uint
     protocol_initialize_unpack_stream(unpack_stream);
 }
 
-void protocol_initialize_unpack_stream(protocol_stream_t * unpack_stream)
+void protocol_initialize_unpack_stream(protocol_stream_t* unpack_stream)
 {
     unpack_stream->unpack_step = STEP_HEADER_SOF;
     unpack_stream->index = 0;
 }
 
-bool protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
+bool protocol_unpack_byte(protocol_stream_t* unpack_stream, uint8_t byte)
 {
     switch (unpack_stream->unpack_step)
     {
@@ -503,7 +511,10 @@ bool protocol_unpack_byte(protocol_stream_t * unpack_stream, uint8_t byte)
                     {
 #if PROTOCOL_DYNAMIC_BUFFER == 1
                         // Reallocate memory.
-                        protocol_reallocate_unpack_stream(unpack_stream, unpack_stream->data_len);
+                        if (!protocol_reallocate_unpack_stream(unpack_stream, unpack_stream->data_len))
+                        {
+                            protocol_initialize_unpack_stream(unpack_stream);
+                        }
 #else
                         // Memory is not enough to receive the total frame.
                         // Please reinitialize the unpack stream object manually, otherwise a memory error will occur.
