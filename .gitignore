@@ -10,4 +10,6 @@ wrappers/micropython/micropython
 wrappers/micropython/py_protocol.mpy
 wrappers/src
 test/__pycache__
+*.pyd
 .vscode
+.venv
