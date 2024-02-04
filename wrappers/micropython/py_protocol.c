@@ -25,7 +25,7 @@ STATIC mp_obj_t pack_data(mp_obj_t cmd_id, mp_obj_t data)
 }
 STATIC MP_DEFINE_CONST_FUN_OBJ_2(pack_data_obj, pack_data);
 
-mp_obj_type_t mp_type_ProtocolFrame;
+mp_obj_full_type_t mp_type_ProtocolFrame;
 
 typedef struct _ProtocolFrame_obj_t {
     // All objects start with the base.
@@ -70,7 +70,7 @@ STATIC MP_DEFINE_CONST_FUN_OBJ_1(ProtocolFrame_pack_obj, ProtocolFrame_pack);
 mp_map_elem_t ProtocolFrame_locals_dict_table[3];
 STATIC MP_DEFINE_CONST_DICT(ProtocolFrame_locals_dict, ProtocolFrame_locals_dict_table);
 
-mp_obj_type_t mp_type_UnpackStream;
+mp_obj_full_type_t mp_type_UnpackStream;
 
 typedef struct _UnpackStream_obj_t {
     // All objects start with the base.
@@ -137,24 +137,20 @@ mp_obj_t mpy_init(mp_obj_fun_bc_t *self, size_t n_args, size_t n_kw, mp_obj_t *a
     // This must be first, it sets up the globals dict and other things
     MP_DYNRUNTIME_INIT_ENTRY
 
-    // FIXME: >>> import py_protocol as p;a=p.ProtocolFrame(0x1234,b'abcd');print(dir(a))
-    // ['__class__', 'pack']
-    // It should looks like ['__class__', 'cmd_id', 'data', 'pack']
-    // The UnpackStream object also has this issue.
     mp_type_ProtocolFrame.base.type = (void*)&mp_type_type;
     mp_type_ProtocolFrame.name = MP_QSTR_ProtocolFrame;
-    mp_type_ProtocolFrame.make_new = ProtocolFrame_make_new;
     ProtocolFrame_locals_dict_table[0] = (mp_map_elem_t){ MP_OBJ_NEW_QSTR(MP_QSTR_cmd_id), MP_OBJ_FROM_PTR(&ProtocolFrame_cmd_id_obj) };
     ProtocolFrame_locals_dict_table[1] = (mp_map_elem_t){ MP_OBJ_NEW_QSTR(MP_QSTR_data), MP_OBJ_FROM_PTR(&ProtocolFrame_data_obj) };
     ProtocolFrame_locals_dict_table[2] = (mp_map_elem_t){ MP_OBJ_NEW_QSTR(MP_QSTR_pack), MP_OBJ_FROM_PTR(&ProtocolFrame_pack_obj) };
-    mp_type_ProtocolFrame.locals_dict = (void*)&ProtocolFrame_locals_dict;
+    MP_OBJ_TYPE_SET_SLOT(&mp_type_ProtocolFrame, make_new, ProtocolFrame_make_new, 0);
+    MP_OBJ_TYPE_SET_SLOT(&mp_type_ProtocolFrame, locals_dict, (void*)&ProtocolFrame_locals_dict, 1);
 
     mp_type_UnpackStream.base.type = (void*)&mp_type_type;
     mp_type_UnpackStream.name = MP_QSTR_UnpackStream;
-    mp_type_UnpackStream.make_new= UnpackStream_make_new;
-    mp_type_UnpackStream.call = UnpackStream_call;
     UnpackStream_locals_dict_table[0] = (mp_map_elem_t){ MP_OBJ_NEW_QSTR(MP_QSTR_unpack_data), MP_OBJ_FROM_PTR(&UnpackStream_unpack_data_obj) };
-    mp_type_UnpackStream.locals_dict = (void*)&UnpackStream_locals_dict;
+    MP_OBJ_TYPE_SET_SLOT(&mp_type_UnpackStream, make_new, UnpackStream_make_new, 0);
+    MP_OBJ_TYPE_SET_SLOT(&mp_type_UnpackStream, call, UnpackStream_call, 1);
+    MP_OBJ_TYPE_SET_SLOT(&mp_type_UnpackStream, locals_dict, (void*)&UnpackStream_locals_dict, 2);
 
     // Make the function available in the module's namespace
     mp_store_global(MP_QSTR___name__, MP_OBJ_NEW_QSTR(MP_QSTR_py_protocol));
