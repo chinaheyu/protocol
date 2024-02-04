@@ -19,7 +19,6 @@ STATIC mp_obj_t pack_data(mp_obj_t cmd_id, mp_obj_t data)
     mp_get_buffer_raise(data, &_data, MP_BUFFER_READ);
     uint32_t frame_size = protocol_calculate_frame_size(_data.len);
     uint8_t* out = (uint8_t*)m_malloc(frame_size);
-    // FIXME: >>> p.pack_data(0x1234,b'abcd') device disconnected. Maybe compiler optimization error.
     protocol_pack_data_to_buffer(_cmd_id, _data.buf, _data.len, out);
     return mp_obj_new_bytearray_by_ref(frame_size, out);
 }

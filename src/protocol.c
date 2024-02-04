@@ -1,10 +1,16 @@
 #include "protocol.h"
 
+#if PROTOCOL_STATIC_CRC == 1
+    #define PROTOCOL_CRC_FUNCTION static
+#else
+    #define PROTOCOL_CRC_FUNCTION
+#endif
+
 #if PROTOCOL_USING_STRING == 1
 #include <string.h>
 #define protocol_memcpy memcpy
 #else
-static void protocol_memcpy(void *dest, const void *src, size_t n)
+PROTOCOL_CRC_FUNCTION void protocol_memcpy(void *dest, const void *src, size_t n)
 {
     const char *csrc = (const char *) src;
     char *cdest = (char *) dest;
@@ -28,7 +34,7 @@ static void protocol_memcpy(void *dest, const void *src, size_t n)
 /**
  * Utils
  */
-static const union { char c[4]; unsigned long ul; } endian_test = {{ 'l', '?', '?', 'b' } };
+PROTOCOL_CRC_FUNCTION const union { char c[4]; unsigned long ul; } endian_test = {{ 'l', '?', '?', 'b' } };
 #define ENDIANNESS ((char)endian_test.ul)
 
 /*
@@ -37,7 +43,7 @@ static const union { char c[4]; unsigned long ul; } endian_test = {{ 'l', '?', '
  * 'b': big endian.
  * '?': Unknown.
  */
-static char get_endianness(void)
+PROTOCOL_CRC_FUNCTION char get_endianness(void)
 {
     return (char)endian_test.ul;
 }
@@ -52,8 +58,8 @@ static char get_endianness(void)
  * refout = True
  * xorout = 0x00
  */
-static const uint8_t CRC8_INIT = 0xff;
-static const uint8_t CRC8_TAB[256] =
+PROTOCOL_CRC_FUNCTION const uint8_t CRC8_INIT = 0xff;
+PROTOCOL_CRC_FUNCTION const uint8_t CRC8_TAB[256] =
 {
     0x00, 0x5e, 0xbc, 0xe2, 0x61, 0x3f, 0xdd, 0x83, 0xc2, 0x9c, 0x7e, 0x20, 0xa3, 0xfd, 0x1f, 0x41,
     0x9d, 0xc3, 0x21, 0x7f, 0xfc, 0xa2, 0x40, 0x1e, 0x5f, 0x01, 0xe3, 0xbd, 0x3e, 0x60, 0x82, 0xdc,
@@ -78,7 +84,7 @@ static const uint8_t CRC8_TAB[256] =
 **  Input:        Data to check, Stream length
 **  Output:       CRC checksum
 */
-static uint8_t get_crc8(uint8_t *pchMessage, size_t dwLength)
+PROTOCOL_CRC_FUNCTION uint8_t get_crc8(uint8_t *pchMessage, size_t dwLength)
 {
     uint8_t ucIndex;
     uint8_t ucCRC8 = CRC8_INIT;
@@ -97,7 +103,7 @@ static uint8_t get_crc8(uint8_t *pchMessage, size_t dwLength)
 **  Input:        Data to Verify,Stream length = Data + checksum
 **  Output:       True or False (CRC Verify Result)
 */
-static bool verify_crc8(uint8_t *pchMessage, size_t dwLength)
+PROTOCOL_CRC_FUNCTION bool verify_crc8(uint8_t *pchMessage, size_t dwLength)
 {
     uint8_t ucExpected = 0;
 
@@ -116,7 +122,7 @@ static bool verify_crc8(uint8_t *pchMessage, size_t dwLength)
 **  Input:        Data to CRC and append, Stream length = Data + checksum
 **  Output:       True or False (CRC Verify Result)
 */
-static void append_crc8(uint8_t *pchMessage, size_t dwLength)
+PROTOCOL_CRC_FUNCTION void append_crc8(uint8_t *pchMessage, size_t dwLength)
 {
     uint8_t ucCRC = 0;
 
@@ -141,8 +147,8 @@ static void append_crc8(uint8_t *pchMessage, size_t dwLength)
  * refout = True
  * xorout = 0x0000
  */
-static const uint16_t CRC16_INIT = 0xffff;
-static const uint16_t CRC16_TAB[256] =
+PROTOCOL_CRC_FUNCTION const uint16_t CRC16_INIT = 0xffff;
+PROTOCOL_CRC_FUNCTION const uint16_t CRC16_TAB[256] =
 {
     0x0000, 0xc0c1, 0xc181, 0x0140, 0xc301, 0x03c0, 0x0280, 0xc241, 0xc601, 0x06c0, 0x0780, 0xc741, 0x0500, 0xc5c1, 0xc481, 0x0440,
     0xcc01, 0x0cc0, 0x0d80, 0xcd41, 0x0f00, 0xcfc1, 0xce81, 0x0e40, 0x0a00, 0xcac1, 0xcb81, 0x0b40, 0xc901, 0x09c0, 0x0880, 0xc841,
@@ -167,7 +173,7 @@ static const uint16_t CRC16_TAB[256] =
 **  Input:        Data to check, Stream length
 **  Output:       CRC checksum
 */
-static uint16_t get_crc16(uint8_t *pchMessage, size_t dwLength)
+PROTOCOL_CRC_FUNCTION uint16_t get_crc16(uint8_t *pchMessage, size_t dwLength)
 {
     uint8_t chData;
     uint16_t wCRC = CRC16_INIT;
@@ -191,7 +197,7 @@ static uint16_t get_crc16(uint8_t *pchMessage, size_t dwLength)
 **  Input:        Data to Verify, Stream length = Data + checksum
 **  Output:       True or False (CRC Verify Result)
 */
-static bool verify_crc16(uint8_t *pchMessage, size_t dwLength)
+PROTOCOL_CRC_FUNCTION bool verify_crc16(uint8_t *pchMessage, size_t dwLength)
 {
     uint16_t wExpected = 0;
 
@@ -209,7 +215,7 @@ static bool verify_crc16(uint8_t *pchMessage, size_t dwLength)
 **  Input:        Data to CRC and append, Stream length = Data + checksum
 **  Output:       True or False (CRC Verify Result)
 */
-static void append_crc16(uint8_t *pchMessage, size_t dwLength)
+PROTOCOL_CRC_FUNCTION void append_crc16(uint8_t *pchMessage, size_t dwLength)
 {
     uint16_t wCRC = 0;
 
@@ -234,8 +240,8 @@ static void append_crc16(uint8_t *pchMessage, size_t dwLength)
  * refout = True
  * xorout = 0x00000000
  */
-static const uint32_t CRC32_INIT = 0xffffffff;
-static const uint32_t CRC32_TAB[] =
+PROTOCOL_CRC_FUNCTION const uint32_t CRC32_INIT = 0xffffffff;
+PROTOCOL_CRC_FUNCTION const uint32_t CRC32_TAB[] =
 {
     0x00000000, 0x77073096, 0xee0e612c, 0x990951ba, 0x076dc419, 0x706af48f, 0xe963a535, 0x9e6495a3, 0x0edb8832, 0x79dcb8a4, 0xe0d5e91e, 0x97d2d988, 0x09b64c2b, 0x7eb17cbd, 0xe7b82d07, 0x90bf1d91,
     0x1db71064, 0x6ab020f2, 0xf3b97148, 0x84be41de, 0x1adad47d, 0x6ddde4eb, 0xf4d4b551, 0x83d385c7, 0x136c9856, 0x646ba8c0, 0xfd62f97a, 0x8a65c9ec, 0x14015c4f, 0x63066cd9, 0xfa0f3d63, 0x8d080df5,
@@ -260,7 +266,7 @@ static const uint32_t CRC32_TAB[] =
 **  Input:        Data to check,Stream length
 **  Output:       CRC checksum
 */
-static uint32_t get_crc32(uint8_t *pchMessage, size_t dwLength)
+PROTOCOL_CRC_FUNCTION uint32_t get_crc32(uint8_t *pchMessage, size_t dwLength)
 {
     uint8_t chData;
     uint32_t wCRC = CRC32_INIT;
@@ -284,7 +290,7 @@ static uint32_t get_crc32(uint8_t *pchMessage, size_t dwLength)
 **  Input:        Data to Verify,Stream length = Data + checksum
 **  Output:       True or False (CRC Verify Result)
 */
-static bool verify_crc32(uint8_t *pchMessage, size_t dwLength)
+PROTOCOL_CRC_FUNCTION bool verify_crc32(uint8_t *pchMessage, size_t dwLength)
 {
     uint32_t wExpected = 0;
     uint32_t input_crc = 0;
@@ -307,7 +313,7 @@ static bool verify_crc32(uint8_t *pchMessage, size_t dwLength)
 **  Input:        Data to CRC and append,Stream length = Data + checksum
 **  Output:       True or False (CRC Verify Result)
 */
-static void append_crc32(uint8_t *pchMessage, size_t dwLength)
+PROTOCOL_CRC_FUNCTION void append_crc32(uint8_t *pchMessage, size_t dwLength)
 {
     uint32_t wCRC = 0;
 

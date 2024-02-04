@@ -55,6 +55,11 @@ extern "C"
     #define PROTOCOL_USING_STRING 1
 #endif
 
+/* static CRC funtions */
+#ifndef PROTOCOL_STATIC_CRC
+    #define PROTOCOL_STATIC_CRC 1
+#endif
+
 typedef enum
 {
     STEP_HEADER_SOF  = 0,

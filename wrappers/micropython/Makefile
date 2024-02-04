@@ -10,7 +10,7 @@ MOD = py_protocol
 SRC = py_protocol.c ../../src/protocol.c
 
 # Definitions
-CFLAGS += -I../../include -DPROTOCOL_USING_STDLIB=0 -DPROTOCOL_USING_STRING=0 -DPROTOCOL_DYNAMIC_BUFFER=0
+CFLAGS += -I../../include -DPROTOCOL_USING_STDLIB=0 -DPROTOCOL_USING_STRING=0 -DPROTOCOL_DYNAMIC_BUFFER=0 -DPROTOCOL_STATIC_CRC=0
 
 # Include to get the rules for compiling and linking the module
 include $(MPY_DIR)/py/dynruntime.mk
